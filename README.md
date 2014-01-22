@@ -1,4 +1,4 @@
 raspi-lcd-driver
 ================
 
-Driver for LCD connected to a Raspberry pi
+Driver for LCD connected to Raspberry pi's GPIO
