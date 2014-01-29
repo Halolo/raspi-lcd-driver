@@ -3,12 +3,15 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <string.h>
 
-#define BCM2708_PERI_BASE        0x20000000
-#define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
+#define BCM2708_PERI_BASE  0x20000000
+#define GPIO_BASE          (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
 
-#define PAGE_SIZE (4*1024)
-#define BLOCK_SIZE (4*1024)
+#define PAGE_SIZE          (4 * 1024)
+#define BLOCK_SIZE         (4 * 1024)
+
+#define DEVICE_MEM_PATH    "/dev/mem"
 
 typedef enum
 {
@@ -31,18 +34,20 @@ typedef enum
 int  mem_fd;
 void *gpio_map;
 
-// I/O access
+/* I/O access */
+
 volatile unsigned *gpio;
 
 
-// GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
-#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-#define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
-#define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
+/* GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y) */
 
-#define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
-#define GPIO_LEV *(gpio+13) // pin level
+#define INP_GPIO(g)        *(gpio + ((g) / 10)) &= ~(7 << (((g) % 10) * 3))
+#define OUT_GPIO(g)        *(gpio + ((g) / 10)) |=  (1 << (((g) % 10) * 3))
+#define SET_GPIO_ALT(g, a) *(gpio + (((g) / 10))) |= (((a) <= 3 ? (a) + 4 : (a) == 4 ? 3 : 2) << (((g) % 10) * 3))
+
+#define GPIO_SET *(gpio + 7)  /* sets   bits which are 1 ignores bits which are 0 */
+#define GPIO_CLR *(gpio + 10) /* clears bits which are 1 ignores bits which are 0 */
+#define GPIO_LEV *(gpio + 13) /* pin level */
 
 void setup_io();
 
@@ -84,34 +89,34 @@ void db_in()
 
 void lcd_reset()
 {
-    GPIO_CLR = 1<<E_GPIO_RST;
+    GPIO_CLR = 1 << E_GPIO_RST;
 
     usleep(100000);
 
-    GPIO_SET = 1<<E_GPIO_RST;
+    GPIO_SET = 1 << E_GPIO_RST;
 
     usleep(50000);
 }
 
 int lcd_read_status()
 {
-    unsigned int    value;
-    unsigned int    ret;
+    unsigned int  value;
+    unsigned int  ret;
 
-    GPIO_CLR = 1<<E_GPIO_E;
+    GPIO_CLR = 1 << E_GPIO_E;
 
     usleep(100000);
 
     db_in();
 
-    GPIO_SET = 1<<E_GPIO_RW;
-    GPIO_CLR = 1<<E_GPIO_RS;
-    GPIO_CLR = 1<<E_GPIO_CS1;
-    GPIO_CLR = 1<<E_GPIO_CS2;
+    GPIO_SET = 1 << E_GPIO_RW;
+    GPIO_CLR = 1 << E_GPIO_RS;
+    GPIO_CLR = 1 << E_GPIO_CS1;
+    GPIO_CLR = 1 << E_GPIO_CS2;
 
     usleep(100000);
 
-    GPIO_SET = 1<<E_GPIO_E;
+    GPIO_SET = 1 << E_GPIO_E;
 
     usleep(100000);
 
@@ -135,37 +140,37 @@ void lcd_on_off(int on)
 {
     db_out();
 
-    GPIO_CLR = 1<<E_GPIO_E;
+    GPIO_CLR = 1 << E_GPIO_E;
 
     usleep(100000);
 
-    GPIO_CLR = 1<<E_GPIO_RW;
-    GPIO_CLR = 1<<E_GPIO_RS;
-    GPIO_CLR = 1<<E_GPIO_CS1;
-    GPIO_SET = 1<<E_GPIO_CS2;
+    GPIO_CLR = 1 << E_GPIO_RW;
+    GPIO_CLR = 1 << E_GPIO_RS;
+    GPIO_CLR = 1 << E_GPIO_CS1;
+    GPIO_SET = 1 << E_GPIO_CS2;
 
-    GPIO_SET = 1<<E_GPIO_E;
+    GPIO_SET = 1 << E_GPIO_E;
 
     if (on == 1)
     {
-        GPIO_SET = 1<<E_GPIO_DB0;
+        GPIO_SET = 1 << E_GPIO_DB0;
     }
     else
     {
-        GPIO_CLR = 1<<E_GPIO_DB0;
+        GPIO_CLR = 1 << E_GPIO_DB0;
     }
 
-    GPIO_SET = 1<<E_GPIO_DB1;
-    GPIO_SET = 1<<E_GPIO_DB2;
-    GPIO_SET = 1<<E_GPIO_DB3;
-    GPIO_SET = 1<<E_GPIO_DB4;
-    GPIO_SET = 1<<E_GPIO_DB5;
-    GPIO_CLR = 1<<E_GPIO_DB6;
-    GPIO_CLR = 1<<E_GPIO_DB7;
+    GPIO_SET = 1 << E_GPIO_DB1;
+    GPIO_SET = 1 << E_GPIO_DB2;
+    GPIO_SET = 1 << E_GPIO_DB3;
+    GPIO_SET = 1 << E_GPIO_DB4;
+    GPIO_SET = 1 << E_GPIO_DB5;
+    GPIO_CLR = 1 << E_GPIO_DB6;
+    GPIO_CLR = 1 << E_GPIO_DB7;
 
     usleep(100000);
 
-    GPIO_CLR = 1<<E_GPIO_E;
+    GPIO_CLR = 1 << E_GPIO_E;
 
     usleep(100000);
 }
@@ -200,7 +205,7 @@ int main(int argc, char **argv)
 {
     char    screen[128];
 
-    // Set up gpi pointer for direct register access
+    /* Set up gpi pointer for direct register access */
     setup_io();
 
     init_lcd();
@@ -211,7 +216,7 @@ int main(int argc, char **argv)
 
     memset(screen, 0x42, sizeof(screen));
 
-    //lcd_print(screen);
+    /* lcd_print(screen); */
 
     sleep(1);
 
@@ -220,38 +225,38 @@ int main(int argc, char **argv)
     printf("Status = 0x%.8X\n", lcd_read_status());
 
     return 0;
-} // main
+} /* main */
 
 
-//
-// Set up a memory regions to access GPIO
-//
+/**
+ * Set up a memory regions to access GPIO
+ */
 void setup_io()
 {
     /* open /dev/mem */
-    if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
-        printf("can't open /dev/mem \n");
+    if ((mem_fd = open(DEVICE_MEM_PATH, O_RDWR|O_SYNC) ) < 0) {
+        printf("can't open %s \n", DEVICE_MEM_PATH);
         exit(-1);
     }
 
     /* mmap GPIO */
     gpio_map = mmap(
-            NULL,             //Any adddress in our space will do
-            BLOCK_SIZE,       //Map length
-            PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
-            MAP_SHARED,       //Shared with other processes
-            mem_fd,           //File to map
-            GPIO_BASE         //Offset to GPIO peripheral
+            NULL,                 /* Any adddress in our space will do */
+            BLOCK_SIZE,           /* Map length */
+            PROT_READ|PROT_WRITE, /* Enable reading & writting to mapped memory */
+            MAP_SHARED,           /* Shared with other processes */
+            mem_fd,               /* File to map */
+            GPIO_BASE             /* Offset to GPIO peripheral */
     );
 
-    close(mem_fd); //No need to keep mem_fd open after mmap
+    close(mem_fd); /* No need to keep mem_fd open after mmap */
 
     if (gpio_map == MAP_FAILED) {
         printf("mmap error\n");
         exit(-1);
     }
 
-    // Always use volatile pointer!
+    /* Always use volatile pointer! */
     gpio = (volatile unsigned *)gpio_map;
-} // setup_io
+} /* setup_io */
 
