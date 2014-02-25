@@ -66,8 +66,6 @@ void db_out()
 	INP_GPIO(E_GPIO_DB7);
 	OUT_GPIO(E_GPIO_DB7);
 
-	usleep(100);
-
 	return;
 }
 
@@ -82,8 +80,6 @@ void db_in()
 	INP_GPIO(E_GPIO_DB6);
 	INP_GPIO(E_GPIO_DB7);
 
-	usleep(100);
-
 	return;
 }
 
@@ -91,47 +87,48 @@ void lcd_read_status(int chip, int pin, int val)
 {
 	db_in();
 
-	GPIO_SET = 1<<E_GPIO_RW;
-	GPIO_CLR = 1<<E_GPIO_RS;
+	GPIO_CLR = 1<<E_GPIO_E;
+
+	usleep(1000);
 
 	if (chip == 1)
 	{
 		GPIO_SET = 1<<E_GPIO_CS1;
 		GPIO_CLR = 1<<E_GPIO_CS2;
 	}
-	else if (chip == 2)
+	else
 	{
 		GPIO_CLR = 1<<E_GPIO_CS1;
 		GPIO_SET = 1<<E_GPIO_CS2;
 	}
 
-	usleep(10);
+	GPIO_SET = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
+
+	usleep(1000);
 
 	GPIO_SET = 1<<E_GPIO_E;
 
-	usleep(10);
+	usleep(1000);
 
 	if (pin != -1)
 	{
 		while (((GPIO_LEV & (1 << pin)) != 0) != val)
 		{
 			GPIO_CLR = 1<<E_GPIO_E;
-			usleep(10);
+			usleep(1000);
 			GPIO_SET = 1<<E_GPIO_E;
-			usleep(10);
+			usleep(1000);
 		}
 	}
 
 	while (((GPIO_LEV & (1 << E_GPIO_DB7)) != 0) == 1)
 	{
 		GPIO_CLR = 1<<E_GPIO_E;
-		usleep(10);
+		usleep(1000);
 		GPIO_SET = 1<<E_GPIO_E;
-		usleep(10);
+		usleep(1000);
 	}
-
-	GPIO_CLR = 1<<E_GPIO_E;
-	usleep(10);
 
 	return;
 }
@@ -140,7 +137,7 @@ void lcd_reset()
 {
 	GPIO_CLR = 1<<E_GPIO_RST;
 
-	usleep(10000);
+	usleep(1000);
 
 	GPIO_SET = 1<<E_GPIO_RST;
 
@@ -154,25 +151,27 @@ void lcd_on_off(int chip, int on)
 {
 	db_out();
 
-	GPIO_CLR = 1<<E_GPIO_RW;
-	GPIO_CLR = 1<<E_GPIO_RS;
+	GPIO_CLR= 1<<E_GPIO_E;
+
+	usleep(1000);
 
 	if (chip == 1)
 	{
 		GPIO_SET = 1<<E_GPIO_CS1;
 		GPIO_CLR = 1<<E_GPIO_CS2;
 	}
-	else if (chip == 2)
+	else
 	{
 		GPIO_CLR = 1<<E_GPIO_CS1;
 		GPIO_SET = 1<<E_GPIO_CS2;
 	}
 
-	usleep(10);
+	GPIO_CLR = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
+
+	usleep(1000);
 
 	GPIO_SET = 1<<E_GPIO_E;
-
-	usleep(10);
 
 	if (on == 1)
 	{
@@ -191,11 +190,9 @@ void lcd_on_off(int chip, int on)
 	GPIO_CLR = 1<<E_GPIO_DB6;
 	GPIO_CLR = 1<<E_GPIO_DB7;
 
-	usleep(10);
+	usleep(1000);
 
 	GPIO_CLR = 1<<E_GPIO_E;
-
-	usleep(10);
 
 	if (on == 1)
 	{
@@ -205,6 +202,258 @@ void lcd_on_off(int chip, int on)
 	{
 		lcd_read_status(chip, E_GPIO_DB5, 1);
 	}
+
+	return;
+}
+
+void lcd_set_x(int chip, char x)
+{
+	db_out();
+
+	GPIO_CLR= 1<<E_GPIO_E;
+
+	usleep(1000);
+
+	if (chip == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_CS1;
+		GPIO_CLR = 1<<E_GPIO_CS2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_CS1;
+		GPIO_SET = 1<<E_GPIO_CS2;
+	}
+
+	GPIO_CLR = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
+
+	usleep(1000);
+
+	GPIO_SET = 1<<E_GPIO_E;
+
+	if ((x & 0x01) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB0;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB0;
+	}
+
+	if ((x & 0x02) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB1;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB1;
+	}
+
+	if ((x & 0x04) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB2;
+	}
+
+	GPIO_SET = 1<<E_GPIO_DB3;
+	GPIO_SET = 1<<E_GPIO_DB4;
+	GPIO_SET = 1<<E_GPIO_DB5;
+	GPIO_CLR = 1<<E_GPIO_DB6;
+	GPIO_SET = 1<<E_GPIO_DB7;
+
+	usleep(1000);
+
+	GPIO_CLR = 1<<E_GPIO_E;
+
+	lcd_read_status(chip, -1, 0);
+
+	return;
+}
+
+void lcd_set_y(int chip, char y)
+{
+	db_out();
+
+	GPIO_CLR= 1<<E_GPIO_E;
+
+	usleep(1000);
+
+	if (chip == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_CS1;
+		GPIO_CLR = 1<<E_GPIO_CS2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_CS1;
+		GPIO_SET = 1<<E_GPIO_CS2;
+	}
+
+	GPIO_CLR = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
+
+	usleep(1000);
+
+	GPIO_SET = 1<<E_GPIO_E;
+
+	if ((y & 0x01) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB0;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB0;
+	}
+
+	if ((y & 0x02) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB1;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB1;
+	}
+
+	if ((y & 0x04) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB2;
+	}
+
+	if ((y & 0x08) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB3;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB3;
+	}
+
+	if ((y & 0x10) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB4;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB4;
+	}
+
+	if ((y & 0x20) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB5;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB5;
+	}
+
+	GPIO_SET = 1<<E_GPIO_DB6;
+	GPIO_CLR = 1<<E_GPIO_DB7;
+
+	usleep(1000);
+
+	GPIO_CLR = 1<<E_GPIO_E;
+
+	lcd_read_status(chip, -1, 0);
+
+	return;
+}
+
+void lcd_set_z(int chip, char z)
+{
+	db_out();
+
+	GPIO_CLR= 1<<E_GPIO_E;
+
+	usleep(1000);
+
+	if (chip == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_CS1;
+		GPIO_CLR = 1<<E_GPIO_CS2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_CS1;
+		GPIO_SET = 1<<E_GPIO_CS2;
+	}
+
+	GPIO_CLR = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
+
+	usleep(1000);
+
+	GPIO_SET = 1<<E_GPIO_E;
+
+	if ((z & 0x01) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB0;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB0;
+	}
+
+	if ((z & 0x02) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB1;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB1;
+	}
+
+	if ((z & 0x04) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB2;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB2;
+	}
+
+	if ((z & 0x08) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB3;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB3;
+	}
+
+	if ((z & 0x10) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB4;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB4;
+	}
+
+	if ((z & 0x20) == 1)
+	{
+		GPIO_SET = 1<<E_GPIO_DB5;
+	}
+	else
+	{
+		GPIO_CLR = 1<<E_GPIO_DB5;
+	}
+
+	GPIO_SET = 1<<E_GPIO_DB6;
+	GPIO_SET = 1<<E_GPIO_DB7;
+
+	usleep(1000);
+
+	GPIO_CLR = 1<<E_GPIO_E;
+
+	lcd_read_status(chip, -1, 0);
 
 	return;
 }
@@ -226,7 +475,19 @@ void init_lcd()
 
 	db_out();
 
+	GPIO_SET = 1<<E_GPIO_RW;
+	GPIO_CLR = 1<<E_GPIO_RS;
 	GPIO_CLR = 1<<E_GPIO_E;
+	GPIO_CLR = 1<<E_GPIO_CS1;
+	GPIO_CLR = 1<<E_GPIO_CS2;
+	GPIO_CLR = 1<<E_GPIO_DB0;
+	GPIO_CLR = 1<<E_GPIO_DB1;
+	GPIO_CLR = 1<<E_GPIO_DB2;
+	GPIO_CLR = 1<<E_GPIO_DB3;
+	GPIO_CLR = 1<<E_GPIO_DB4;
+	GPIO_CLR = 1<<E_GPIO_DB5;
+	GPIO_CLR = 1<<E_GPIO_DB6;
+	GPIO_CLR = 1<<E_GPIO_DB7;
 
 	lcd_reset();
 
@@ -241,25 +502,27 @@ void lcd_print(int chip, char * buff, int size)
 	{
 		db_out();
 
-		GPIO_CLR = 1<<E_GPIO_RW;
-		GPIO_SET = 1<<E_GPIO_RS;
+		GPIO_CLR = 1<<E_GPIO_E;
+
+		usleep(1000);
 
 		if (chip == 1)
 		{
 			GPIO_SET = 1<<E_GPIO_CS1;
 			GPIO_CLR = 1<<E_GPIO_CS2;
 		}
-		else if (chip == 2)
+		else
 		{
 			GPIO_CLR = 1<<E_GPIO_CS1;
 			GPIO_SET = 1<<E_GPIO_CS2;
 		}
 
-		usleep(10);
+		GPIO_CLR = 1<<E_GPIO_RW;
+		GPIO_SET = 1<<E_GPIO_RS;
+
+		usleep(1000);
 
 		GPIO_SET = 1<<E_GPIO_E;
-
-		usleep(10);
 
 		if ((buff[i] & 0x01)  == 0)
 		{
@@ -333,11 +596,9 @@ void lcd_print(int chip, char * buff, int size)
 			GPIO_SET = 1<<E_GPIO_DB7;
 		}
 
-		usleep(10);
+		usleep(1000);
 
 		GPIO_CLR = 1<<E_GPIO_E;
-
-		usleep(10);
 
 		lcd_read_status(chip, -1, 0);
 	}
@@ -347,23 +608,43 @@ void lcd_print(int chip, char * buff, int size)
 
 int main(int argc, char **argv)
 {
-	char	buff[32];
+	char	buff[16];
 
 	// Set up gpi pointer for direct register access
 	setup_io();
 
 	init_lcd();
 
-	lcd_on_off(1, 1);
-	lcd_on_off(2, 1);
+
+	lcd_set_x(1, 0);
+	lcd_set_x(2, 0);
+
+	lcd_set_y(1, 0);
+	lcd_set_y(2, 0);
+
+	lcd_set_z(1, 0);
+	lcd_set_z(2, 0);
+
+	memset(buff, 0x0F, sizeof(buff));
+	lcd_print(1, buff, sizeof(buff));
+	lcd_print(2, buff, sizeof(buff));
 
 	memset(buff, 0x55, sizeof(buff));
 	lcd_print(1, buff, sizeof(buff));
-
-	memset(buff, 0x0F, sizeof(buff));
 	lcd_print(2, buff, sizeof(buff));
 
-	sleep(20);
+	memset(buff, 0xF0, sizeof(buff));
+	lcd_print(1, buff, sizeof(buff));
+	lcd_print(2, buff, sizeof(buff));
+
+	memset(buff, 0xAA, sizeof(buff));
+	lcd_print(1, buff, sizeof(buff));
+	lcd_print(2, buff, sizeof(buff));
+
+	lcd_on_off(1, 1);
+	lcd_on_off(2, 1);
+
+	sleep(5);
 
 	lcd_on_off(1, 0);
 	lcd_on_off(2, 0);
