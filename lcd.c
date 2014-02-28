@@ -45,7 +45,7 @@ typedef enum
 #define GPIO_CLR(gpio) *(gpio + 10) // clears bits which are 1 ignores bits which are 0
 #define GPIO_LEV(gpio) *(gpio + 13) // pin level
 
-int setup_io(volatile unsigned int * gpio);
+void * setup_io();
 
 void db_out(volatile unsigned int * gpio)
 {
@@ -66,6 +66,8 @@ void db_out(volatile unsigned int * gpio)
     INP_GPIO(gpio, E_GPIO_DB7);
     OUT_GPIO(gpio, E_GPIO_DB7);
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
     return;
 }
 
@@ -80,6 +82,8 @@ void db_in(volatile unsigned int * gpio)
     INP_GPIO(gpio, E_GPIO_DB6);
     INP_GPIO(gpio, E_GPIO_DB7);
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
     return;
 }
 
@@ -87,8 +91,10 @@ void lcd_pulse(volatile unsigned int * gpio)
 {
     usleep(5);
     GPIO_SET(gpio) = 1 << E_GPIO_E;
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
     usleep(5);
     GPIO_CLR(gpio) = 1 << E_GPIO_E;
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
     usleep(5);
 
     return;
@@ -168,61 +174,82 @@ void lcd_fill_data(volatile unsigned int * gpio, char data)
         GPIO_SET(gpio) = 1 << E_GPIO_DB7;
     }
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
+    return;
+}
+
+void lcd_read_data(volatile unsigned int * gpio, char * data)
+{
+    char    bit[8];
+    int     i;
+
+    *data = 0;
+
+    bit[7] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB7)) != 0);
+    bit[6] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB6)) != 0);
+    bit[4] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB5)) != 0);
+    bit[4] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB4)) != 0);
+    bit[3] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB3)) != 0);
+    bit[2] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB2)) != 0);
+    bit[1] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB1)) != 0);
+    bit[0] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB0)) != 0);
+
+    for (i = 0; i < sizeof(bit); i++)
+    {
+        if (bit[i] == 0)
+        {
+            *data &= ~ (0 << i);
+        }
+        else
+        {
+            *data |= (1 << i);
+        }
+    }
+
     return;
 }
 
 void lcd_read_status(volatile unsigned int * gpio, int chip, char expected)
 {
-    char    status;
-    char    bit[8];
-    int     i;
-
-    db_in(gpio);
-
-    if (chip == 1)
-    {
-        GPIO_SET(gpio) = 1 << E_GPIO_CS1;
-        GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
-    }
-    else
-    {
-        GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
-        GPIO_SET(gpio) = 1 << E_GPIO_CS2;
-    }
-
-    GPIO_SET(gpio) = 1 << E_GPIO_RW;
-    GPIO_CLR(gpio) = 1 << E_GPIO_RS;
+    char    status = 0;
 
     do
     {
-        lcd_pulse(gpio);
+        db_in(gpio);
 
-        status = 0;
-
-        bit[7] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB7)) != 0);
-        bit[6] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB6)) != 0);
-        bit[4] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB5)) != 0);
-        bit[4] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB4)) != 0);
-        bit[3] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB3)) != 0);
-        bit[2] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB2)) != 0);
-        bit[1] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB1)) != 0);
-        bit[0] = ((GPIO_LEV(gpio) & (1 << E_GPIO_DB0)) != 0);
-
-        for (i = 0; i < sizeof(bit); i++)
+        if (chip == 1)
         {
-            if (bit[i] == 0)
-            {
-                status &= (0 << i);
-            }
-            else
-            {
-                status |= (1 << i);
-            }
+            GPIO_SET(gpio) = 1 << E_GPIO_CS1;
+            GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
         }
+        else
+        {
+            GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
+            GPIO_SET(gpio) = 1 << E_GPIO_CS2;
+        }
+
+        GPIO_SET(gpio) = 1 << E_GPIO_RW;
+        GPIO_CLR(gpio) = 1 << E_GPIO_RS;
+
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
+        usleep(5);
+        GPIO_SET(gpio) = 1 << E_GPIO_E;
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+        usleep(5);
+
+        lcd_read_data(gpio, &status);
+
+        GPIO_CLR(gpio) = 1 << E_GPIO_RW;
+        GPIO_SET(gpio) = 1 << E_GPIO_E;
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
     } while (status != expected);
 
     GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
     GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
+
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
 
     return;
 }
@@ -245,12 +272,16 @@ void lcd_instruction(volatile unsigned int * gpio, int chip, char instruction)
     GPIO_CLR(gpio) = 1 << E_GPIO_RW;
     GPIO_CLR(gpio) = 1 << E_GPIO_RS;
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
     lcd_fill_data(gpio, instruction);
 
     lcd_pulse(gpio);
 
     GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
     GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
+
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
 
     return;
 }
@@ -270,24 +301,28 @@ void init_lcd(volatile unsigned int * gpio)
     INP_GPIO(gpio, E_GPIO_CS2);
     OUT_GPIO(gpio, E_GPIO_CS2);
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
     db_out(gpio);
 
     GPIO_CLR(gpio) = 1 << E_GPIO_RS;
+    GPIO_CLR(gpio) = 1 << E_GPIO_RW;
     GPIO_CLR(gpio) = 1 << E_GPIO_E;
     GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
     GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
     GPIO_CLR(gpio) = 1 << E_GPIO_RST;
 
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
     /* Reset */
-    usleep(100000);
+    usleep(5);
     GPIO_SET(gpio) = 1 << E_GPIO_RST;
+
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
 
     /* Switch on */
     lcd_instruction(gpio, 1, LCD_ON);
     lcd_instruction(gpio, 2, LCD_ON);
-
-    lcd_read_status(gpio, 1, LCD_STATUS_READY);
-    lcd_read_status(gpio, 2, LCD_STATUS_READY);
 
     return;
 }
@@ -314,17 +349,64 @@ void lcd_print(volatile unsigned int * gpio, int chip, char * buff, int size)
         GPIO_CLR(gpio) = 1 << E_GPIO_RW;
         GPIO_SET(gpio) = 1 << E_GPIO_RS;
 
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
         lcd_fill_data(gpio, buff[i]);
 
         lcd_pulse(gpio);
 
-        lcd_read_status(gpio, chip, LCD_STATUS_READY);
-
         GPIO_CLR(gpio) = 1 << E_GPIO_RS;
+
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
     }
 
     GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
     GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
+
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+
+    return;
+}
+
+void lcd_read(volatile unsigned int * gpio, int chip, char * buff, int size)
+{
+    int i;
+
+    for (i = 0; i < size; i++)
+    {
+        db_in(gpio);
+
+        if (chip == 1)
+        {
+            GPIO_SET(gpio) = 1 << E_GPIO_CS1;
+            GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
+        }
+        else
+        {
+            GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
+            GPIO_SET(gpio) = 1 << E_GPIO_CS2;
+        }
+
+        GPIO_SET(gpio) = 1 << E_GPIO_RW;
+        GPIO_SET(gpio) = 1 << E_GPIO_RS;
+
+        usleep(5);
+        GPIO_SET(gpio) = 1 << E_GPIO_E;
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+        usleep(5);
+
+        lcd_read_data(gpio, &buff[i]);
+
+        GPIO_CLR(gpio) = 1 << E_GPIO_E;
+        GPIO_CLR(gpio) = 1 << E_GPIO_RS;
+        GPIO_CLR(gpio) = 1 << E_GPIO_RW;
+        msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
+    }
+
+    GPIO_CLR(gpio) = 1 << E_GPIO_CS1;
+    GPIO_CLR(gpio) = 1 << E_GPIO_CS2;
+
+    msync((void *)gpio, BLOCK_SIZE, MS_SYNC);
 
     return;
 }
@@ -333,10 +415,11 @@ int main(int argc, char **argv)
 {
     volatile unsigned * gpio = NULL;
     char                buff[16];
+    char                rbuff[64];
     int                 ret = 0;
 
     // Set up gpi pointer for direct register access
-    ret = setup_io(gpio);
+    gpio = setup_io();
     if (ret != 0)
     {
         printf("main: can't init gpio\n");
@@ -370,8 +453,28 @@ int main(int argc, char **argv)
 
     sleep(10);
 
+    lcd_instruction(gpio, 1, LCD_RESET_X);
+    lcd_instruction(gpio, 2, LCD_RESET_X);
+    lcd_instruction(gpio, 1, LCD_RESET_Y);
+    lcd_instruction(gpio, 2, LCD_RESET_Y);
+    lcd_instruction(gpio, 1, LCD_RESET_Z);
+    lcd_instruction(gpio, 2, LCD_RESET_Z);
+
+    lcd_read(gpio, 1, rbuff, sizeof(rbuff));
+    printf("Chip 1 - First field : 0x%.2X\n", rbuff[0]);
+    printf("Chip 1 - Second field : 0x%.2X\n", rbuff[16]);
+    printf("Chip 1 - Third field : 0x%.2X\n", rbuff[32]);
+    printf("Chip 1 - Fourth field : 0x%.2X\n", rbuff[48]);
+    lcd_read(gpio, 2, rbuff, sizeof(rbuff));
+    printf("Chip 2 - First field : 0x%.2X\n", rbuff[0]);
+    printf("Chip 2 - Second field : 0x%.2X\n", rbuff[16]);
+    printf("Chip 2 - Third field : 0x%.2X\n", rbuff[32]);
+    printf("Chip 2 - Fourth field : 0x%.2X\n", rbuff[48]);
+
     lcd_instruction(gpio, 1, LCD_OFF);
     lcd_instruction(gpio, 2, LCD_OFF);
+
+    fflush(stdout);
 
     munmap((void *)gpio, BLOCK_SIZE); 
 
@@ -381,19 +484,20 @@ int main(int argc, char **argv)
 //
 // Set up a memory regions to access GPIO
 //
-int setup_io(volatile unsigned int * gpio)
+void * setup_io()
 {
-    int                 mem_fd;
+    int     mem_fd;
+    void *  map = NULL;
 
     /* open /dev/mem */
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0)
     {
         printf("setup_io: can't open /dev/mem\n");
-        return -1;
+        return NULL;
     }
 
     /* mmap GPIO */
-    gpio = mmap(
+    map = mmap(
             NULL,                   //Any adddress in our space will do
             BLOCK_SIZE,             //Map length
             PROT_READ|PROT_WRITE,   // Enable reading & writting to mapped memory
@@ -404,11 +508,11 @@ int setup_io(volatile unsigned int * gpio)
 
     close(mem_fd);  //No need to keep mem_fd open after mmap
 
-    if (gpio == MAP_FAILED)
+    if (map == MAP_FAILED)
     {
         printf("setup_io: mmap error\n");
-        return -1;
+        return NULL;
     }
 
-    return 0;
+    return map;
 }
