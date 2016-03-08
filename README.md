@@ -1,4 +1,4 @@
 raspi-lcd-driver
 ================
 
-Driver for LCD connected to Raspberry pi's GPIO
+ERM12864-2 LCD graphic module control for Raspberry Pi
