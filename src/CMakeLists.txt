@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 project(raspi-lcd-control)
 
-# add the binary tree to the search path for include files
 include_directories(
     "${PROJECT_SOURCE_DIR}")
- 
-# add the executable
-add_executable(	raspi-lcd-control
-                lcd.c )
 
-target_link_libraries(raspi-lcd-control ${ITK_LIBRARIES})
+# lcd lib
+add_library( raspi-lcd-control SHARED
+             lcd.c )
+ 
+# test program
+add_executable(	test-lcd
+                test.c )
+
+target_link_libraries(test-lcd raspi-lcd-control ${ITK_LIBRARIES})
