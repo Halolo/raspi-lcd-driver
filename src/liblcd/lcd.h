@@ -8,19 +8,26 @@
 #ifndef LCD_H_
 #define LCD_H_
 
-#define LCD_PX_SIZE	64
+#include <stdint.h>
 
-typedef struct lcd_buf_t { char buff[(LCD_PX_SIZE / 8) * LCD_PX_SIZE]; } lcd_buf_t;
+#define LCD_PX_SIZE     64
+#define LCD_PX_HEIGHT   LCD_PX_SIZE
+#define LCD_PX_WIDTH    LCD_PX_SIZE * 2
+
+typedef struct lcd_buf_t { uint8_t px[LCD_PX_HEIGHT * LCD_PX_WIDTH / 8]; } lcd_buf_t;
+struct lcd_hdl_t;
 
 void *lcd_connect();
-void lcd_disconnect(void * lcd_hdl);
+void lcd_disconnect(struct lcd_hdl_t *lcd_hdl);
 
-void init_lcd(void *lcd_hdl);
+void lcd_init(struct lcd_hdl_t *lcd_hdl);
 
-void lcd_print(void *lcd_hdl, int chip, lcd_buf_t *buff);
-void lcd_read(void *lcd_hdl, int chip, lcd_buf_t *buff);
+void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff);
+/*
+ * TODO: TO BE DONE, Doesn't work
+void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff);*/
 
-void lcd_on(void * lcd_hdl);
-void lcd_off(void * lcd_hdl);
+void lcd_on(struct lcd_hdl_t *lcd_hdl);
+void lcd_off(struct lcd_hdl_t *lcd_hdl);
 
 #endif /* LCD_H_ */

@@ -7,12 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "lcd.h"
 
 int main(int argc, char **argv)
 {
-    void                *lcd_hdl = NULL;
+    struct lcd_hdl_t    *lcd_hdl = NULL;
     int                 ret = 0;
     char                header[3];
     int                 offset;
@@ -24,7 +25,7 @@ int main(int argc, char **argv)
 
     memset(header, 0, sizeof(header));
 
-    memset(data.buff, 0, sizeof(data));
+    memset(data.px, 0, sizeof(data));
 
     lcd_hdl = lcd_connect();
     if (lcd_hdl == NULL)
@@ -35,7 +36,8 @@ int main(int argc, char **argv)
 
     if (argc != 2)
     {
-        printf("Invalid parameter.\n");
+        printf("Invalid argument.\n");
+        printf("Please specify a 128 * 64 BMP Black and White (1b) file.\n");
         return -1;
     }
 
@@ -76,26 +78,19 @@ int main(int argc, char **argv)
         {
             fseek(f, offset, SEEK_SET);
 
-            fread(data.buff, sizeof(data), 1, f);
+            fread(data.px, sizeof(data), 1, f);
 
-            init_lcd(lcd_hdl);
+            fclose(f);
 
-            lcd_print(lcd_hdl, 1, &data);
+            lcd_init(lcd_hdl);
 
-            for (i = 0; i < sizeof(data); i++)
-            {
-                data.buff[i] = ~ data.buff[i];
-            }
-
-            lcd_print(lcd_hdl, 2, &data);
+            lcd_print(lcd_hdl, &data);
 
             sleep(10);
 
             lcd_off(lcd_hdl);
         }
     }
-
-    fclose(f);
 
     lcd_disconnect(lcd_hdl);
 

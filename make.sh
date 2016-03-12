@@ -66,7 +66,7 @@ RET=0
 
 if [ ! "$TOOLCHAIN_PATH" ] && [ ! "$TOOLCHAIN_PREFIX" ] && [ ! "$SYSROOT" ]; then
     echo "Native build. This must be run on target. To cross compile, provide '-t', '-p' and '-s' options"
-    cmake "../src"
+    cmake -G"Eclipse CDT4 - Unix Makefiles" "../src"
     RET=$?
 elif [ ! "$TOOLCHAIN_PATH" ] || [ ! "$TOOLCHAIN_PREFIX" ] || [ ! "$SYSROOT" ]; then
     echo "To cross compile, you must provide:
