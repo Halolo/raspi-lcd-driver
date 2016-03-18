@@ -4,4 +4,5 @@ project(raspi-lcd-control)
 set(CMAKE_SYSTEM_PREFIX_PATH "/usr/local")
 
 add_subdirectory(liblcd)
+add_subdirectory(lcd-controllerd)
 add_subdirectory(test)

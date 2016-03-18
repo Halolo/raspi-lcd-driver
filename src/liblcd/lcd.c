@@ -414,9 +414,9 @@ void lcd_init(struct lcd_hdl_t *lcd_hdl)
 
     msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
 
-    /* Switch on */
-    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_ON);
-    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_ON);
+    /* Switch off */
+    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_OFF);
+    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_OFF);
 
     pthread_mutex_unlock(&mutex);
 
@@ -443,6 +443,10 @@ void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
     bit[7] = 0x01;
 
     pthread_mutex_lock(&mutex);
+
+    /* Switch off */
+    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_OFF);
+    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_OFF);
 
     for (chip = E_CHIP_1; chip < E_CHIP_NUMBER; chip++)
     {
@@ -519,6 +523,10 @@ void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
             }
         }
     }
+
+    /* Switch on */
+    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_ON);
+    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_ON);
 
     pthread_mutex_unlock(&mutex);
 

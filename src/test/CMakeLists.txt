@@ -9,4 +9,4 @@ target_link_libraries(test-lcd lcd ${ITK_LIBRARIES})
 install(TARGETS test-lcd
 	RUNTIME DESTINATION bin)
 
-install(FILES linux.bmp DESTINATION /usr/share/test-lcd)
+install(FILES linux.bmp DESTINATION /usr/local/share/test-lcd)

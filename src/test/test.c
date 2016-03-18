@@ -11,41 +11,22 @@
 
 #include "lcd.h"
 
-int main(int argc, char **argv)
+#define BMP_PATH    "/usr/share/test-lcd/linux.bmp"
+
+void test_bmp(lcd_buf_t *data)
 {
-    struct lcd_hdl_t    *lcd_hdl = NULL;
-    int                 ret = 0;
     char                header[3];
     int                 offset;
     int                 size;
     char                reserved[4];
-    lcd_buf_t           data;
     FILE                *f;
-    int                 i;
 
     memset(header, 0, sizeof(header));
 
-    memset(data.px, 0, sizeof(data));
-
-    lcd_hdl = lcd_connect();
-    if (lcd_hdl == NULL)
-    {
-        printf("main: can't connect to lcd\n");
-        return -1;
-    }
-
-    if (argc != 2)
-    {
-        printf("Invalid argument.\n");
-        printf("Please specify a 128 * 64 BMP Black and White (1b) file.\n");
-        return -1;
-    }
-
-    f = fopen(argv[1], "rb");
+    f = fopen(BMP_PATH, "rb");
     if (f == NULL)
     {
-        printf("Can't open file '%s'\n", argv[1]);
-        return -1;
+        printf("Can't open file '%s'\n", BMP_PATH);
     }
 
     fread(&header, (sizeof(header) - 1), 1, f);
@@ -78,19 +59,51 @@ int main(int argc, char **argv)
         {
             fseek(f, offset, SEEK_SET);
 
-            fread(data.px, sizeof(data), 1, f);
+            fread(data->px, sizeof(lcd_buf_t), 1, f);
 
             fclose(f);
-
-            lcd_init(lcd_hdl);
-
-            lcd_print(lcd_hdl, &data);
-
-            sleep(10);
-
-            lcd_off(lcd_hdl);
         }
     }
+}
+
+
+int main()
+{
+    struct lcd_hdl_t    *lcd_hdl = NULL;
+    int                 ret = 0;
+    lcd_buf_t           data;
+
+    memset(data.px, 0, sizeof(data));
+
+    lcd_hdl = lcd_connect();
+    if (lcd_hdl == NULL)
+    {
+        printf("main: can't connect to lcd\n");
+        return -1;
+    }
+
+    test_bmp(&data);
+
+    lcd_init(lcd_hdl);
+
+    lcd_print(lcd_hdl, &data);
+
+    sleep(10);
+
+    memset(data.px, 0, sizeof(data));
+
+    data.px[0] = 0xF0;
+    data.px[15] = 0x0F;
+    data.px[1007] = 0xFF;
+    data.px[1023] = 0x00;
+
+    lcd_init(lcd_hdl);
+
+    lcd_print(lcd_hdl, &data);
+
+    sleep(10);
+
+    lcd_off(lcd_hdl);
 
     lcd_disconnect(lcd_hdl);
 
