@@ -10,6 +10,9 @@
 
 #include "lcd.h"
 
+#define SOCK_PATH       "/usr/local/share/lcd_socket"
+#define MAX_CONNECTIONS 5
+
 typedef enum {
     E_LCD_MSG_STOP  = 0,
     E_LCD_MSG_PRINT = 1,

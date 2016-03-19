@@ -1,5 +1,5 @@
 /*
- * test.c
+ * lcd-controllerd-cli.c
  *
  *  Created on: Mar 8, 2016
  *      Author: laurent
@@ -8,12 +8,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
-#include "lcd.h"
+#include "lcd-controllerd.h"
 
-#define BMP_PATH    "/usr/share/test-lcd/linux.bmp"
+#define BMP_PATH ""
 
-void test_bmp(lcd_buf_t *data)
+void load_bmp(lcd_buf_t *data)
 {
     char                header[3];
     int                 offset;
@@ -66,48 +69,43 @@ void test_bmp(lcd_buf_t *data)
     }
 }
 
-
 int main()
 {
-    struct lcd_hdl_t    *lcd_hdl = NULL;
-    int                 ret = 0;
-    lcd_buf_t           data;
+    int                 ret;
+    int                 client;
+    int                 client_size;
+    struct sockaddr_un  remote;
+    lcd_msg_t           msg;
 
-    memset(data.px, 0, sizeof(data));
-
-    lcd_hdl = lcd_connect();
-    if (lcd_hdl == NULL)
+    if ((client = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
-        printf("main: can't connect to lcd\n");
+        printf("lcd-controllerd-cli: Can't create socket\n");
         return -1;
     }
 
-    test_bmp(&data);
+    printf("lcd-controllerd-cli: Trying to connect...\n");
 
-    lcd_init(lcd_hdl);
+    remote.sun_family = AF_UNIX;
+    strcpy(remote.sun_path, SOCK_PATH);
 
-    lcd_print(lcd_hdl, &data);
+    if (connect(client, (struct sockaddr *)&remote, strlen(remote.sun_path) + sizeof(remote.sun_family)) == -1)
+    {
+        printf("lcd-controllerd-cli: Can't connect to remote socket\n");
+        return -1;
+    }
 
-    sleep(10);
+    printf("lcd-controllerd-cli: Connected\n");
 
-    memset(data.px, 0, sizeof(data));
+    msg.cmd = E_LCD_MSG_STOP;
+    msg.data.empty = NULL;
 
-    data.px[0] = 0xF0;
-    data.px[15] = 0x0F;
-    data.px[1007] = 0xFF;
-    data.px[1023] = 0x00;
+    if (send(client, &msg, sizeof(msg), 0) == -1)
+    {
+        printf("lcd-controllerd-cli: Can't send message through socket\n");
+        ret = -1;
+    }
 
-    lcd_init(lcd_hdl);
+    close(client);
 
-    lcd_print(lcd_hdl, &data);
-
-    sleep(10);
-
-    lcd_off(lcd_hdl);
-
-    lcd_disconnect(lcd_hdl);
-
-    fflush(stdout);
-
-    return 0;
+    return ret;
 }
