@@ -50,7 +50,6 @@ int main()
         stop = 0;
         do
         {
-            printf("lcd-controllerd: Waiting for a connection...\n");
             remote_len = sizeof(remote);
             if ((client = accept(server, (struct sockaddr *)&remote, &remote_len)) == -1) {
                 printf("lcd-controllerd: Connexion refused\n");
@@ -59,8 +58,6 @@ int main()
             }
             else
             {
-                printf("lcd-controllerd: Connected\n");
-
                 lcd_hdl = lcd_connect();
                 if (lcd_hdl == NULL)
                 {
@@ -95,7 +92,6 @@ int main()
                                 lcd_print(lcd_hdl, &msg.data.buff);
                                 break;
                             case E_LCD_MSG_STOP:
-                                printf("lcd-controllerd: Stop command received\n");
                                 stop = 1;
                                 break;
                             default:
