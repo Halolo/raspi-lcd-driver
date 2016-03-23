@@ -14,6 +14,16 @@
 #define LCD_PX_HEIGHT   LCD_PX_SIZE
 #define LCD_PX_WIDTH    LCD_PX_SIZE * 2
 
+typedef struct {
+    uint8_t x;
+    uint8_t y;
+} lcd_point_t;
+
+typedef struct {
+    lcd_point_t start;
+    lcd_point_t stop;
+} lcd_area_t;
+
 typedef struct lcd_buf_t { uint8_t px[LCD_PX_HEIGHT * LCD_PX_WIDTH / 8]; } lcd_buf_t;
 struct lcd_hdl_t;
 
