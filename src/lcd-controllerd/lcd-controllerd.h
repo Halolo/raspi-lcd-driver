@@ -33,7 +33,7 @@ typedef enum {
 typedef struct {
     E_LCD_TEXT_TYPE type;
     lcd_area_t      area;
-    char            *text[512];
+    char            text[512];
 } lcd_text_t;
 
 typedef enum {

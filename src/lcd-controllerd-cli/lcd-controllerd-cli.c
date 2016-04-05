@@ -79,6 +79,7 @@ void print_usage() {
     printf("\t -O : LCD ON\n");
     printf("\t -o : LCD OFF\n");
     printf("\t -p <bmp file> : LCD PRINT\n");
+    printf("\t -t <text> : LCD PRINT text\n");
     printf("\t -s : STOP LCD daemon\n");
 }
 
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
     int                 option = 0;
     int                 i = 0;
     char                bmp[100];
+    char                txt[512];
     uint8_t             actions[E_LCD_MSG_NUMBER];
     int                 ret = 0;
     int                 client;
@@ -112,6 +114,10 @@ int main(int argc, char *argv[]) {
             case 'p' :
                 actions[E_LCD_MSG_PRINT] = 1;
                 strcpy(bmp,optarg);
+                break;
+            case 't' :
+                actions[E_LCD_MSG_TEXT] = 1;
+                strcpy(txt,optarg);
                 break;
             default:
                 print_usage();
@@ -160,6 +166,12 @@ int main(int argc, char *argv[]) {
                             printf("lcd-controllerd-cli: Can't read BMP file (%s)\n", bmp);
                             ret = -1;
                         }
+                        break;
+                    case E_LCD_MSG_TEXT:
+                        msg.cmd = E_LCD_MSG_TEXT;
+                        msg.data.text.area.start.row = 0;
+                        msg.data.text.area.start.line = 0;
+                        strcpy(msg.data.text.text, txt);
                         break;
                     default:
                         printf("lcd-controllerd-cli: Invalid message index (%d)\n", i);

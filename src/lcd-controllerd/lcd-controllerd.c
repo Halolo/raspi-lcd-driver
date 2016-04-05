@@ -91,6 +91,12 @@ int main()
                             case E_LCD_MSG_PRINT:
                                 lcd_print(lcd_hdl, &msg.data.buff);
                                 break;
+                            case E_LCD_MSG_TEXT:
+                                lcd_print_txt(lcd_hdl, msg.data.text.area.start.row,
+                                        msg.data.text.area.start.line,
+                                        msg.data.text.text,
+                                        strlen(msg.data.text.text));
+                                break;
                             case E_LCD_MSG_STOP:
                                 stop = 1;
                                 break;

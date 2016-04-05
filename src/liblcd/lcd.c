@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "lcd.h"
+#include "font.h"
 
 #define BCM2708_PERI_BASE   0x20000000
 #define GPIO_BASE           (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
@@ -24,7 +25,7 @@
 #define LCD_STATUS_READY    0x00
 
 struct lcd_hdl_t{
-    volatile unsigned int   *gpio;
+        volatile unsigned int   *gpio;
 };
 
 typedef enum
@@ -521,6 +522,118 @@ void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
 
                 lcd_read_status(lcd_hdl, chip, LCD_STATUS_READY);
             }
+        }
+    }
+
+    /* Switch on */
+    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_ON);
+    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_ON);
+
+    pthread_mutex_unlock(&mutex);
+
+    return;
+}
+
+void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *txt, uint8_t len)
+{
+    uint8_t x,y;
+    uint8_t chip;
+    uint8_t index;
+    uint8_t i,j;
+
+    row = row % (LCD_PX_HEIGHT / 8);
+    line = line % LCD_PX_WIDTH;
+
+    x = row;
+
+    if (line > LCD_PX_SIZE)
+    {
+        chip = E_CHIP_2;
+        y = line % LCD_PX_SIZE;
+    }
+    else
+    {
+        chip = E_CHIP_1;
+        y = line;
+    }
+
+    pthread_mutex_lock(&mutex);
+
+    /* Switch off */
+    lcd_instruction(lcd_hdl, E_CHIP_1, LCD_OFF);
+    lcd_instruction(lcd_hdl, E_CHIP_2, LCD_OFF);
+
+    lcd_instruction(lcd_hdl, chip, LCD_RESET_Z);
+
+    for (i = 0; i < len; i++)
+    {
+        if ((txt[i] >= LCD_FONT_MIN) && (txt[i] <= LCD_FONT_MAX))
+        {
+            index = i - LCD_FONT_MIN;
+        }
+        else
+        {
+            // Space instead of non-recognized char
+            index = 0;
+        }
+
+        if ((y + i) == (LCD_PX_SIZE - 1))
+        {
+            y = 0;
+            if (chip == E_CHIP_1)
+            {
+                chip = E_CHIP_2;
+
+            }
+            else
+            {
+                chip = E_CHIP_1;
+                if (row < ((LCD_PX_HEIGHT / 8) - 1))
+                {
+                    x = x + 1;
+                }
+                else
+                {
+                    x = 0;
+                }
+            }
+        }
+
+        lcd_instruction(lcd_hdl, chip, LCD_RESET_X + x);
+        lcd_instruction(lcd_hdl, chip, LCD_RESET_Y + y);
+
+        for (j = 0; j < LCD_FONT_WIDTH; j++)
+        {
+            db_out(lcd_hdl);
+
+            if (chip == E_CHIP_1)
+            {
+                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+            }
+            else
+            {
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+            }
+
+            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RW;
+            GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_RS;
+
+            msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
+
+            lcd_fill_data(lcd_hdl, lcd_font[index][j]);
+
+            lcd_pulse(lcd_hdl);
+
+            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RS;
+
+            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+
+            msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
+
+            lcd_read_status(lcd_hdl, chip, LCD_STATUS_READY);
         }
     }
 
