@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
         actions[i] = 0;
     }
 
-    while ((option = getopt(argc, argv,"oOsp:")) != -1) {
+    while ((option = getopt(argc, argv,"oOsp:t:")) != -1) {
         switch (option) {
             case 'o' :
                 actions[E_LCD_MSG_OFF] = 1;

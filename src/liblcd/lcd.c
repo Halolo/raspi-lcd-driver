@@ -548,12 +548,12 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *t
 
     if (line > LCD_PX_SIZE)
     {
-        chip = E_CHIP_2;
+        chip = E_CHIP_1;
         y = line % LCD_PX_SIZE;
     }
     else
     {
-        chip = E_CHIP_1;
+        chip = E_CHIP_2;
         y = line;
     }
 
@@ -569,7 +569,7 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *t
     {
         if ((txt[i] >= LCD_FONT_MIN) && (txt[i] <= LCD_FONT_MAX))
         {
-            index = i - LCD_FONT_MIN;
+            index = txt[i] - LCD_FONT_MIN;
         }
         else
         {
@@ -577,33 +577,37 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *t
             index = 0;
         }
 
-        if ((y + i) == (LCD_PX_SIZE - 1))
+        for (j = 0; j < LCD_FONT_WIDTH; j++)
         {
-            y = 0;
-            if (chip == E_CHIP_1)
+            if (y == (LCD_PX_SIZE - 1))
             {
-                chip = E_CHIP_2;
-
-            }
-            else
-            {
-                chip = E_CHIP_1;
-                if (row < ((LCD_PX_HEIGHT / 8) - 1))
+                y = 0;
+                if (chip == E_CHIP_2)
                 {
-                    x = x + 1;
+                    chip = E_CHIP_1;
+
                 }
                 else
                 {
-                    x = 0;
+                    chip = E_CHIP_2;
+                    if (x == ((LCD_PX_HEIGHT / 8) - 1))
+                    {
+                        x = 0;
+                    }
+                    else
+                    {
+                        x = x + 1;
+                    }
                 }
             }
-        }
+            else
+            {
+                y = y + 1;
+            }
 
-        lcd_instruction(lcd_hdl, chip, LCD_RESET_X + x);
-        lcd_instruction(lcd_hdl, chip, LCD_RESET_Y + y);
+            lcd_instruction(lcd_hdl, chip, LCD_RESET_X + x);
+            lcd_instruction(lcd_hdl, chip, LCD_RESET_Y + y);
 
-        for (j = 0; j < LCD_FONT_WIDTH; j++)
-        {
             db_out(lcd_hdl);
 
             if (chip == E_CHIP_1)
