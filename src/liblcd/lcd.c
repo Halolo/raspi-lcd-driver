@@ -682,57 +682,92 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
     return;
 }
 
-// TODO: TO BE DONE, Doesn't work
 void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
 {
     E_CHIP  chip;
-    int     i;
-    int     x;
+    int     i,j;
+    int     x,y;
+    int     s;
     uint8_t part[(LCD_PX_SIZE / 8) * LCD_PX_SIZE];
+    uint8_t line[LCD_PX_SIZE];
+    uint8_t bit[8];
+    uint8_t seg[8];
+
+    bit[0] = 0x80;
+    bit[1] = 0x40;
+    bit[2] = 0x20;
+    bit[3] = 0x10;
+    bit[4] = 0x08;
+    bit[5] = 0x04;
+    bit[6] = 0x02;
+    bit[7] = 0x01;
 
     pthread_mutex_lock(&mutex);
 
+    db_in(lcd_hdl);
+
     for (chip = E_CHIP_1; chip < E_CHIP_NUMBER; chip++)
     {
-        for (i = 0; i < LCD_PX_SIZE; i++)
+        for (i = 0; i < (LCD_PX_SIZE / 8); i++)
         {
-            db_in(lcd_hdl);
-
-            if (chip == E_CHIP_1)
+            for (j = 0; j < LCD_PX_SIZE; j++)
             {
-                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+                if (chip == E_CHIP_1)
+                {
+                    GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+                    GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+                }
+                else
+                {
+                    GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
+                    GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+                }
+
+                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_RW;
+                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_RS;
+
+                usleep(5);
+                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_E;
+                msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
+                usleep(5);
+
+                lcd_read_data(lcd_hdl, &line[j]);
+
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_E;
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RS;
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RW;
+
+                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
                 GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
+
+                msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
+
+                lcd_read_status(lcd_hdl, chip, LCD_STATUS_READY);
+            }
+
+            for (s = 0; s < (LCD_PX_SIZE / 8); s++)
+            {
+                for (x = 0; x < 8; x++)
+                {
+                    seg[x] = 0;
+                    for (y = 0; y < 8; y++)
+                    {
+                        seg[x] |= bit[x] & line[s + y];
+                    }
+                    part[(i * LCD_PX_SIZE) + (s + (x * (LCD_PX_SIZE / 8)))] = seg[x];
+                }
+            }
+        }
+
+        for (x = 0; x < LCD_PX_SIZE; x++)
+        {
+            if (chip == E_CHIP_2)
+            {
+                memcpy(&buff->px[x * ((LCD_PX_SIZE / 8) * 2)], &part[x], (LCD_PX_SIZE / 8));
             }
             else
             {
-                GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
-                GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
-            }
-
-            GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_RW;
-            GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_RS;
-
-            usleep(5);
-            GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_E;
-            msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
-            usleep(5);
-
-            lcd_read_data(lcd_hdl, &part[i]);
-
-            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_E;
-            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RS;
-            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_RW;
-
-            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS1;
-            GPIO_CLR(lcd_hdl->gpio) = 1 << E_GPIO_CS2;
-
-            msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
-
-            lcd_read_status(lcd_hdl, chip, LCD_STATUS_READY);
-
-            for (x = 0; x < LCD_PX_SIZE; x++)
-            {
-                memcpy(&part[x * (LCD_PX_SIZE / 8)], &buff->px[(x * (LCD_PX_WIDTH / 8)) + chip * (LCD_PX_SIZE / 8)], (LCD_PX_SIZE / 8));
+                memcpy(&buff->px[x * ((LCD_PX_SIZE / 8) * 2) + (LCD_PX_SIZE / 8)], &part[x], (LCD_PX_SIZE / 8));
             }
         }
     }

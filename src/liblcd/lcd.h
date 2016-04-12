@@ -46,9 +46,8 @@ void lcd_init(struct lcd_hdl_t *lcd_hdl);
 
 void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff);
 void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt);
-/*
- * TODO: TO BE DONE, Doesn't work
-void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff);*/
+
+void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff);
 
 void lcd_on(struct lcd_hdl_t *lcd_hdl);
 void lcd_off(struct lcd_hdl_t *lcd_hdl);

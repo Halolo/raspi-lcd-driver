@@ -31,6 +31,9 @@ typedef enum {
     E_LCD_MSG_OFF           = 3,
     E_LCD_MSG_PROGRESS_BAR  = 4,
     E_LCD_MSG_TEXT          = 5,
+    E_LCD_MSG_CLEAR         = 6,
+    E_LCD_MSG_READ_REQ      = 7,
+    E_LCD_MSG_READ_RSP      = 8,
     E_LCD_MSG_NUMBER
 } E_LCD_MSG;
 
