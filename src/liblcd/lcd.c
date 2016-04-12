@@ -534,27 +534,54 @@ void lcd_print(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
     return;
 }
 
-void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *txt, uint8_t len)
+void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
 {
     uint8_t x,y;
+    uint8_t x_stop, y_stop;
     uint8_t chip;
+    uint8_t chip_stop;
     uint8_t index;
     uint8_t i,j;
 
-    row = row % (LCD_PX_HEIGHT / 8);
-    line = line % LCD_PX_WIDTH;
+    if ((txt->area.start.row >= (LCD_PX_HEIGHT / 8)) ||
+            (txt->area.start.line >= LCD_PX_WIDTH) ||
+            (txt->area.stop.row >= (LCD_PX_HEIGHT / 8)) ||
+            (txt->area.stop.line >= LCD_PX_WIDTH))
+    {
+        printf("lcd_print_txt: Invalid parameter, out of range area\n");
+        return;
+    }
 
-    x = row;
+    if ((txt->area.start.row > txt->area.stop.row) ||
+            (txt->area.start.line > txt->area.stop.line))
+    {
+        printf("lcd_print_txt: Invalid parameter, area definition is incoherent\n");
+        return;
+    }
 
-    if (line > LCD_PX_SIZE)
+    x = txt->area.start.row;
+    x_stop = txt->area.stop.row;
+
+    if (txt->area.start.line > LCD_PX_SIZE)
     {
         chip = E_CHIP_1;
-        y = line % LCD_PX_SIZE;
+        y = txt->area.start.line % LCD_PX_SIZE;
     }
     else
     {
         chip = E_CHIP_2;
-        y = line;
+        y = txt->area.start.line;
+    }
+
+    if (txt->area.stop.line > LCD_PX_SIZE)
+    {
+        chip_stop = E_CHIP_1;
+        y_stop = txt->area.stop.line % LCD_PX_SIZE;
+    }
+    else
+    {
+        chip_stop = E_CHIP_2;
+        y_stop = txt->area.stop.line;
     }
 
     pthread_mutex_lock(&mutex);
@@ -565,11 +592,11 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *t
 
     lcd_instruction(lcd_hdl, chip, LCD_RESET_Z);
 
-    for (i = 0; i < len; i++)
+    for (i = 0; i < strlen(txt->text); i++)
     {
-        if ((txt[i] >= LCD_FONT_MIN) && (txt[i] <= LCD_FONT_MAX))
+        if ((txt->text[i] >= LCD_FONT_MIN) && (txt->text[i] <= LCD_FONT_MAX))
         {
-            index = txt[i] - LCD_FONT_MIN;
+            index = txt->text[i] - LCD_FONT_MIN;
         }
         else
         {
@@ -579,25 +606,30 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, uint8_t row, uint8_t line, char *t
 
         for (j = 0; j < LCD_FONT_WIDTH; j++)
         {
-            if (y == (LCD_PX_SIZE - 1))
+            if ((chip_stop == chip) && (y == y_stop))
             {
                 y = 0;
+                if (x == x_stop)
+                {
+                    x = 0;
+                }
+                else
+                {
+                    x = x + 1;
+                }
+            }
+
+            if (y == (LCD_PX_SIZE - 1))
+            {
                 if (chip == E_CHIP_2)
                 {
+                    y = 0;
                     chip = E_CHIP_1;
-
                 }
                 else
                 {
                     chip = E_CHIP_2;
-                    if (x == ((LCD_PX_HEIGHT / 8) - 1))
-                    {
-                        x = 0;
-                    }
-                    else
-                    {
-                        x = x + 1;
-                    }
+
                 }
             }
             else

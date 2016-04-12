@@ -25,18 +25,6 @@ typedef struct {
 } lcd_progress_bar_t;
 
 typedef enum {
-    E_LCD_TEXT_TYPE_BASIC       = 1,
-    E_LCD_TEXT_TYPE_SCROLL_LINE = 2,
-    E_LCD_TEXT_TYPE_NUMBER
-} E_LCD_TEXT_TYPE;
-
-typedef struct {
-    E_LCD_TEXT_TYPE type;
-    lcd_area_t      area;
-    char            text[512];
-} lcd_text_t;
-
-typedef enum {
     E_LCD_MSG_STOP          = 0,
     E_LCD_MSG_PRINT         = 1,
     E_LCD_MSG_ON            = 2,
