@@ -539,7 +539,7 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
     uint8_t x,y;
     uint8_t x_stop, y_stop;
     uint8_t chip;
-    uint8_t chip_stop;
+    uint8_t chip_start, chip_stop;
     uint8_t index;
     uint8_t i,j;
 
@@ -564,12 +564,12 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
 
     if (txt->area.start.line > LCD_PX_SIZE)
     {
-        chip = E_CHIP_1;
+        chip_start = E_CHIP_1;
         y = txt->area.start.line % LCD_PX_SIZE;
     }
     else
     {
-        chip = E_CHIP_2;
+        chip_start = E_CHIP_2;
         y = txt->area.start.line;
     }
 
@@ -583,6 +583,8 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
         chip_stop = E_CHIP_2;
         y_stop = txt->area.stop.line;
     }
+
+    chip = chip_start;
 
     pthread_mutex_lock(&mutex);
 
@@ -609,6 +611,7 @@ void lcd_print_txt(struct lcd_hdl_t *lcd_hdl, lcd_text_t *txt)
             if ((chip_stop == chip) && (y == y_stop))
             {
                 y = 0;
+                chip = chip_start;
                 if (x == x_stop)
                 {
                     x = 0;

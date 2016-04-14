@@ -107,7 +107,7 @@ int main()
                                 case E_LCD_MSG_READ_REQ:
                                     msg.cmd = E_LCD_MSG_READ_RSP;
                                     lcd_read(lcd_hdl, &msg.data.buff);
-                                    if (send(server, &msg, sizeof(msg), 0) == -1)
+                                    if (send(client, &msg, sizeof(msg), 0) == -1)
                                     {
                                         printf("lcd-controllerd: Can't send message through socket\n");
                                     }

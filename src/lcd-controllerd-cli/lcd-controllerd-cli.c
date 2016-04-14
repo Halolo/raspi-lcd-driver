@@ -15,37 +15,69 @@
 
 #include "lcd-controllerd.h"
 
-int save_bmp(lcd_buf_t *data, char *bmp)
+#pragma pack(1)
+typedef struct {
+    char        header[2];
+    uint32_t    size;
+    uint8_t     reserved[4];
+    uint32_t    offset;
+} lcd_bmp_file_hdr_t;
+
+#pragma pack(1)
+typedef struct {
+    uint32_t    header_size;
+    uint32_t    width;
+    uint32_t    height;
+    uint16_t    plane;
+    uint16_t    depth;
+    uint32_t    compression;
+    uint32_t    picture_size;
+    uint32_t    res_h;
+    uint32_t    res_v;
+    uint32_t    colors;
+    uint32_t    significance;
+
+} lcd_bmp_pic_hdr_t;
+
+#pragma pack(1)
+typedef struct {
+    lcd_bmp_file_hdr_t  file_header;
+    lcd_bmp_pic_hdr_t   picture_header;
+} lcd_bmp_t;
+
+int save_bmp(lcd_buf_t *data, char *file)
 {
-    int                 ret = 0;
-    char                header[3];
-    int                 offset;
-    int                 size;
-    char                reserved[4];
-    FILE                *f;
+    int         ret = 0;
+    lcd_bmp_t   bmp;
+    FILE        *f;
 
-    memset(header, 0, sizeof(header));
-    memset(reserved, 0xFF, sizeof(reserved));
+    bmp.file_header.header[0] = 'B';
+    bmp.file_header.header[1] = 'M';
 
-    f = fopen(bmp, "rb");
+    memset(bmp.file_header.reserved, 0xFF, sizeof(bmp.file_header.reserved));
+    bmp.file_header.offset = sizeof(bmp.file_header) + sizeof(bmp.picture_header);
+    bmp.file_header.size = sizeof(lcd_buf_t) + bmp.file_header.offset;
+
+    bmp.picture_header.header_size = sizeof(bmp.picture_header);
+    bmp.picture_header.picture_size = sizeof(lcd_buf_t);
+    bmp.picture_header.colors = 2;
+    bmp.picture_header.compression = 0;
+    bmp.picture_header.width = LCD_PX_WIDTH;
+    bmp.picture_header.height = LCD_PX_HEIGHT;
+    bmp.picture_header.plane = 1;
+    bmp.picture_header.depth = 1;
+    bmp.picture_header.res_h = 0xb13;
+    bmp.picture_header.res_v = 0xb13;
+    bmp.picture_header.significance = 2;
+
+    f = fopen(file, "wb+");
     if (f == NULL)
     {
-        printf("Can't open file '%s'\n", bmp);
+        printf("lcd-controllerd-cli: Can't open file '%s'\n", file);
         return -1;
     }
 
-    strcpy(header, "BM");
-    fwrite(&header, (sizeof(header) - 1), 1, f);
-
-    offset = 130;
-    size = 1024 + offset;
-
-    fwrite(&size, sizeof(size), 1, f);
-    fwrite(reserved, sizeof(reserved), 1, f);
-    fwrite(&offset, sizeof(offset), 1, f);
-
-    fseek(f, offset, SEEK_SET);
-
+    fwrite(&bmp, sizeof(bmp), 1, f);
     fwrite(data->px, sizeof(lcd_buf_t), 1, f);
 
     fclose(f);
@@ -53,53 +85,36 @@ int save_bmp(lcd_buf_t *data, char *bmp)
     return ret;
 }
 
-int load_bmp(lcd_buf_t *data, char *bmp)
+int load_bmp(lcd_buf_t *data, char *file)
 {
-    int                 ret = 0;
-    char                header[3];
-    int                 offset;
-    int                 size;
-    char                reserved[4];
-    FILE                *f;
+    int         ret = 0;
+    lcd_bmp_t   bmp;
+    FILE        *f;
 
-    memset(header, 0, sizeof(header));
-
-    f = fopen(bmp, "rb");
+    f = fopen(file, "rb");
     if (f == NULL)
     {
-        printf("Can't open file '%s'\n", bmp);
+        printf("lcd-controllerd-cli: Can't open file '%s'\n", file);
         return -1;
     }
 
-    fread(&header, (sizeof(header) - 1), 1, f);
+    fread(&bmp.file_header, sizeof(bmp.file_header), 1, f);
+    fread(&bmp.picture_header, sizeof(bmp.picture_header), 1, f);
 
-    if (    (strcmp(header, "BM") != 0) &&
-            (strcmp(header, "BA") != 0) &&
-            (strcmp(header, "CI") != 0) &&
-            (strcmp(header, "CP") != 0) &&
-            (strcmp(header, "IC") != 0) &&
-            (strcmp(header, "PT") != 0))
+    if ((bmp.picture_header.width != 128) ||
+            (bmp.picture_header.height != 64) ||
+            (bmp.picture_header.colors != 2) ||
+            (bmp.picture_header.compression != 0) ||
+            (bmp.picture_header.depth != 1) ||
+            (bmp.picture_header.picture_size != ((LCD_PX_HEIGHT * LCD_PX_WIDTH) / 8)))
     {
-        printf("Invalid BMP file.\n");
+        printf("lcd-controllerd-cli: Invalid BMP file.\n");
         ret = -1;
     }
     else
     {
-        fread(&size, sizeof(size), 1, f);
-        fread(reserved, sizeof(reserved), 1, f);
-        fread(&offset, sizeof(offset), 1, f);
-
-        if (size < offset)
-        {
-            printf("Invalid BMP file.\n");
-            ret = -1;
-        }
-        else
-        {
-            fseek(f, offset, SEEK_SET);
-
-            fread(data->px, sizeof(lcd_buf_t), 1, f);
-        }
+        fseek(f, bmp.file_header.offset, SEEK_SET);
+        fread(data->px, sizeof(lcd_buf_t), 1, f);
     }
 
     fclose(f);
