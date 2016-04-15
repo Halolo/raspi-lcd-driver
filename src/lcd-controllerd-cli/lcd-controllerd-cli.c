@@ -17,45 +17,56 @@
 
 #pragma pack(1)
 typedef struct {
-    char        header[2];
-    uint32_t    size;
-    uint8_t     reserved[4];
-    uint32_t    offset;
+        char        header[2];
+        uint32_t    size;
+        uint8_t     reserved[4];
+        uint32_t    offset;
 } lcd_bmp_file_hdr_t;
 
 #pragma pack(1)
 typedef struct {
-    uint32_t    header_size;
-    uint32_t    width;
-    uint32_t    height;
-    uint16_t    plane;
-    uint16_t    depth;
-    uint32_t    compression;
-    uint32_t    picture_size;
-    uint32_t    res_h;
-    uint32_t    res_v;
-    uint32_t    colors;
-    uint32_t    significance;
+        uint8_t    r;
+        uint8_t    g;
+        uint8_t    b;
+        uint8_t    reserved;
+} lcd_bmp_col_scheme_t;
+
+#pragma pack(1)
+typedef struct {
+        uint32_t    header_size;
+        uint32_t    width;
+        uint32_t    height;
+        uint16_t    plane;
+        uint16_t    bit_counts;
+        uint32_t    compression;
+        uint32_t    picture_size;
+        uint32_t    res_h;
+        uint32_t    res_v;
+        uint32_t    colors;
+        uint32_t    important;
 
 } lcd_bmp_pic_hdr_t;
 
 #pragma pack(1)
 typedef struct {
-    lcd_bmp_file_hdr_t  file_header;
-    lcd_bmp_pic_hdr_t   picture_header;
+        lcd_bmp_file_hdr_t      file_header;
+        lcd_bmp_pic_hdr_t       picture_header;
+        lcd_bmp_col_scheme_t    color_scheme[2];
 } lcd_bmp_t;
 
 int save_bmp(lcd_buf_t *data, char *file)
 {
-    int         ret = 0;
-    lcd_bmp_t   bmp;
-    FILE        *f;
+    int             ret = 0;
+    lcd_bmp_t       bmp;
+    FILE            *f;
 
     bmp.file_header.header[0] = 'B';
     bmp.file_header.header[1] = 'M';
 
     memset(bmp.file_header.reserved, 0xFF, sizeof(bmp.file_header.reserved));
-    bmp.file_header.offset = sizeof(bmp.file_header) + sizeof(bmp.picture_header);
+    bmp.file_header.offset = sizeof(bmp.file_header) +
+            sizeof(bmp.picture_header) +
+            sizeof(bmp.color_scheme);
     bmp.file_header.size = sizeof(lcd_buf_t) + bmp.file_header.offset;
 
     bmp.picture_header.header_size = sizeof(bmp.picture_header);
@@ -65,10 +76,18 @@ int save_bmp(lcd_buf_t *data, char *file)
     bmp.picture_header.width = LCD_PX_WIDTH;
     bmp.picture_header.height = LCD_PX_HEIGHT;
     bmp.picture_header.plane = 1;
-    bmp.picture_header.depth = 1;
-    bmp.picture_header.res_h = 0xb13;
-    bmp.picture_header.res_v = 0xb13;
-    bmp.picture_header.significance = 2;
+    bmp.picture_header.bit_counts = 1;
+    bmp.picture_header.res_h = 100;
+    bmp.picture_header.res_v = 100;
+    bmp.picture_header.important = 0;
+
+    bmp.color_scheme[0].r = 0xFF;
+    bmp.color_scheme[0].g = 0xFF;
+    bmp.color_scheme[0].b = 0xFF;
+
+    bmp.color_scheme[1].r = 0;
+    bmp.color_scheme[1].g = 0;
+    bmp.color_scheme[1].b = 0;
 
     f = fopen(file, "wb+");
     if (f == NULL)
@@ -105,7 +124,7 @@ int load_bmp(lcd_buf_t *data, char *file)
             (bmp.picture_header.height != 64) ||
             (bmp.picture_header.colors != 2) ||
             (bmp.picture_header.compression != 0) ||
-            (bmp.picture_header.depth != 1) ||
+            (bmp.picture_header.bit_counts != 1) ||
             (bmp.picture_header.picture_size != ((LCD_PX_HEIGHT * LCD_PX_WIDTH) / 8)))
     {
         printf("lcd-controllerd-cli: Invalid BMP file.\n");

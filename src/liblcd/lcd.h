@@ -36,7 +36,11 @@ typedef struct {
     char            text[512];
 } lcd_text_t;
 
-typedef struct lcd_buf_t { uint8_t px[LCD_PX_HEIGHT * LCD_PX_WIDTH / 8]; } lcd_buf_t;
+#pragma pack(1)
+typedef struct lcd_buf_t {
+    uint8_t px[(LCD_PX_HEIGHT * LCD_PX_WIDTH) / 8];
+} lcd_buf_t;
+
 struct lcd_hdl_t;
 
 void *lcd_connect();
