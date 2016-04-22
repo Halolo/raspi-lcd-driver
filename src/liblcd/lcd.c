@@ -707,6 +707,8 @@ void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
 
     pthread_mutex_lock(&mutex);
 
+    lcd_instruction(lcd_hdl, chip, LCD_RESET_Z);
+
     db_in(lcd_hdl);
 
     for (chip = E_CHIP_1; chip < E_CHIP_NUMBER; chip++)
@@ -733,6 +735,9 @@ void lcd_read(struct lcd_hdl_t *lcd_hdl, lcd_buf_t *buff)
                 GPIO_SET(lcd_hdl->gpio) = 1 << E_GPIO_E;
                 msync((void *)lcd_hdl->gpio, BLOCK_SIZE, MS_SYNC);
                 usleep(5);
+
+                lcd_instruction(lcd_hdl, chip, LCD_RESET_X + i);
+                lcd_instruction(lcd_hdl, chip, LCD_RESET_Y + j);
 
                 lcd_read_data(lcd_hdl, &line[j]);
 
